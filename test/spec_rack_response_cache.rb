@@ -66,6 +66,32 @@ context Rack::ResponseCache do
     request{|env| [302, {'Content-Type' => 'text/html'}, ['']]}
     @cache.should.equal({})
   end
+  
+  specify 'should not cache when "no cache" cache control directives' do
+    request{|env| [200, {'Content-Type' => 'text/html', 'Cache-Control' => 'no-cache'}, ['']]}
+    @cache.should.equal({})
+  end
+  
+  specify 'should not cache when "private" cache control directives' do
+    request{|env| [200, {'Content-Type' => 'text/html', 'Cache-Control' => 'private'}, ['']]}
+    request{|env| [200, {'Content-Type' => 'text/html', 'Cache-Control' => "private, max-age=0, must-revalidate"}, ['']]}
+    @cache.should.equal({})
+  end
+  
+  specify 'should cache requests when is "public" cache control directives' do
+    request{|env| [200, {'Content-Type' => 'text/html', 'Cache-Control' => 'public'}, ['one']]}
+    @cache.should.equal({'/path/to/blah.html' => ['one']})
+  end
+  
+  specify 'should cache requests when including "public" cache control directives' do
+    request{|env| [200, {'Content-Type' => 'text/html', 'Cache-Control' => 'max-age=300, public'}, ['many']]}    
+    @cache.should.equal({'/path/to/blah.html' => ['many']})
+  end
+  
+  specify 'should cache when no cache control directives' do
+    request{|env| [200, {'Content-Type' => 'text/html'}, ['none']]}
+    @cache.should.equal({'/path/to/blah.html' => ['none']})
+  end
 
   specify "should not cache results if the block returns nil or false" do
     request(:rc_block=>proc{false})

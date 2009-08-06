@@ -8,12 +8,16 @@ require 'rack'
 # be served directly by a front end webserver.
 class Rack::ResponseCache
   # The default proc used if a block is not provided to .new
+  # Returns nil (ie. don't cache) if Cache-Control includes "private" directive
   # It unescapes the PATH_INFO of the environment, and makes sure that it doesn't
   # include '..'.  If the Content-Type of the response is text/(html|css|xml),
   # return a path with the appropriate extension (.html, .css, or .xml).
   # If the path ends with a / and the Content-Type is text/html, change the basename
   # of the path to index.html.
   DEFAULT_PATH_PROC = proc do |env, res|
+    if res[1].include? "Cache-Control"
+      return if res[1]["Cache-Control"].split(',').collect{|d|d.strip}.include? "private"
+    end
     path = Rack::Utils.unescape(env['PATH_INFO'])
     if !path.include?('..') and match = /text\/((?:x|ht)ml|css)/o.match(res[1]['Content-Type'])
       type = match[1]
@@ -40,20 +44,47 @@ class Rack::ResponseCache
   end
 
   # Call the next middleware with the environment.  If the request was successful (response status 200),
-  # was a GET request, and had an empty query string, call the block set up in initialize to get the path.
+  # was a GET request, did not have a 'no-cache' cache control directive and had an empty query string, 
+  # call the block set up in initialize to get the path. 
   # If the cache is a string, create any necessary middle directories, and cache the file in the appropriate
   # subdirectory of cache.  Otherwise, cache the body of the reponse as the value with the path as the key.
   def call(env)
-    res = @app.call(env)
-    if env['REQUEST_METHOD'] == 'GET' and env['QUERY_STRING'] == '' and res[0] == 200 and path = @path_proc.call(env, res)
+    @env = env
+    @res = @app.call(@env)
+    if cacheable? and path = @path_proc.call(@env, @res)
       if @cache.is_a?(String)
         path = File.join(@cache, path) if @cache
         FileUtils.mkdir_p(File.dirname(path))
-        File.open(path, 'wb'){|f| res[2].each{|c| f.write(c)}}
+        File.open(path, 'wb'){|f| @res[2].each{|c| f.write(c)}}
       else
-        @cache[path] = res[2]
+        @cache[path] = @res[2]
       end
     end
-    res
+    @res
+  end
+  
+  private 
+  def cacheable?
+    get and !query_string and success and !no_cache
+  end
+  
+  def get
+    @env['REQUEST_METHOD'] == 'GET'
+  end
+  
+  def query_string
+    @env['QUERY_STRING'] != ''
+  end
+  
+  def success
+    @res[0] == 200
+  end
+  
+  def no_cache
+    cache_control_directives.include? 'no-cache'
+  end
+  
+  def cache_control_directives
+    (@res[1]["Cache-Control"] || "").split(',').collect {|d| d.strip}
   end
 end
