@@ -23,6 +23,7 @@ Gem::Specification.new do |s|
     lib/rack/contrib/bounce_favicon.rb
     lib/rack/contrib/callbacks.rb
     lib/rack/contrib/config.rb
+    lib/rack/contrib/cookies.rb
     lib/rack/contrib/csshttprequest.rb
     lib/rack/contrib/deflect.rb
     lib/rack/contrib/etag.rb
@@ -75,7 +76,7 @@ Gem::Specification.new do |s|
 
   s.extra_rdoc_files = %w[README.rdoc COPYING]
   s.add_dependency 'rack', '>= 0.9.1'
-  s.add_dependency 'test-spec', '~> 0.9.0'
+  s.add_development_dependency 'test-spec', '~> 0.9.0'
   s.add_development_dependency 'tmail', '>= 1.2'
   s.add_development_dependency 'json', '>= 1.1'
 
