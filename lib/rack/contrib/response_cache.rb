@@ -8,23 +8,45 @@ require 'rack'
 # be served directly by a front end webserver.
 class Rack::ResponseCache
   # The default proc used if a block is not provided to .new
-  # Returns nil (ie. don't cache) if Cache-Control includes "private" directive
-  # It unescapes the PATH_INFO of the environment, and makes sure that it doesn't
-  # include '..'.  If the Content-Type of the response is text/(html|css|xml),
-  # return a path with the appropriate extension (.html, .css, or .xml).
-  # If the path ends with a / and the Content-Type is text/html, change the basename
-  # of the path to index.html.
+  # Doesn't cache unless path does not contain '..', Content-Type is
+  # whitelisted, and path agrees with Content-Type
+  # Inserts appropriate extension if no extension in path
+  # Uses /index.html if path ends in /
   DEFAULT_PATH_PROC = proc do |env, res|
-    if res[1].include? "Cache-Control"
-      return if res[1]["Cache-Control"].split(',').collect{|d|d.strip}.include? "private"
-    end
     path = Rack::Utils.unescape(env['PATH_INFO'])
-    if !path.include?('..') and match = /text\/((?:x|ht)ml|css)/o.match(res[1]['Content-Type'])
-      type = match[1]
-      path = "#{path}.#{type}" unless /\.#{type}\z/.match(path)
-      path = File.join(File.dirname(path), 'index.html') if type == 'html' and File.basename(path) == '.html'
-      path
+    
+    content_types = {
+      "application/pdf" => %w[pdf],
+      "application/xhtml+xml" => %w[xhtml],
+      "text/css" => %w[css],
+      "text/csv" => %w[csv],
+      "text/html" => %w[html htm],
+      "text/javascript" => %w[js], "application/javascript" => %w[js],
+      "text/plain" => %w[txt],
+      "text/xml" => %w[xml],
+    }
+    content_type = res[1]['Content-Type'].to_s
+    
+    if !path.include?('..') and extensions = content_types[content_type]
+      # path doesn't include '..' and Content-Type is whitelisted
+      case
+      when path.match(/\/$/) && content_type == "text/html"
+        # path ends in / and Content-Type is text/html
+        path << "index.html"
+      when File.extname(path) == ""
+        # no extension
+        path << ".#{extensions.first}"
+      when !extensions.include?(File.extname(path)[1..-1])
+        # extension agrees with Content-Type
+        path = nil
+      else
+        # do nothing, path is alright
+      end
+    else
+      path = nil
     end
+    
+    path
   end
 
   # Initialize a new ReponseCache object with the given arguments.  Arguments:
@@ -65,7 +87,7 @@ class Rack::ResponseCache
   
   private 
   def cacheable?
-    get and !query_string and success and !no_cache
+    get and !query_string and success and !no_cache and !private_cache
   end
   
   def get
@@ -78,6 +100,10 @@ class Rack::ResponseCache
   
   def success
     @res[0] == 200
+  end
+  
+  def private_cache
+    cache_control_directives.include? 'private'
   end
   
   def no_cache

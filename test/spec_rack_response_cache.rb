@@ -1,6 +1,7 @@
 require 'test/spec'
 require 'rack/mock'
-require 'rack/contrib/response_cache'
+#require 'rack/contrib/response_cache'
+require File.join(File.dirname(__FILE__), '../lib/rack/contrib/response_cache')
 require 'fileutils'
 
 context Rack::ResponseCache do
@@ -35,7 +36,7 @@ context Rack::ResponseCache do
     @cache.should.equal('/path/to/blah.html'=>@def_value, '/path/3.html'=>@def_value)
   end
 
-  specify "should not CACHE RESults if request method is not GET" do
+  specify "should not cache results if request method is not GET" do
     request(:meth=>:post)
     @cache.should.equal({})
     request(:meth=>:put)
@@ -123,27 +124,44 @@ context Rack::ResponseCache do
     @cache.should.equal('/path with spaces.html'=>@def_value, '/path<href>.html'=>@def_value)
   end
 
-  specify "should cache html, css, and xml responses by default" do
+  specify "should cache html mime_type without extension at .html" do
     request(:path=>'/a')
     @cache.should.equal('/a.html'=>@def_value)
-    request(:path=>'/b', :headers=>{'CT'=>'text/xml'})
-    @cache.should.equal('/a.html'=>@def_value, '/b.xml'=>@def_value)
-    request(:path=>'/c', :headers=>{'CT'=>'text/css'})
-    @cache.should.equal('/a.html'=>@def_value, '/b.xml'=>@def_value, '/c.css'=>@def_value)
   end
 
-  specify "should cache responses by default with the extension added if not already present" do
-    request(:path=>'/a.html')
-    @cache.should.equal('/a.html'=>@def_value)
-    request(:path=>'/b.xml', :headers=>{'CT'=>'text/xml'})
-    @cache.should.equal('/a.html'=>@def_value, '/b.xml'=>@def_value)
-    request(:path=>'/c.css', :headers=>{'CT'=>'text/css'})
-    @cache.should.equal('/a.html'=>@def_value, '/b.xml'=>@def_value, '/c.css'=>@def_value)
-  end
+  {
+    :css => %w[text/css],
+    :csv => %w[text/csv],
+    :html => %w[text/html],
+    :js => %w[text/javascript application/javascript],
+    :pdf => %w[application/pdf],
+    :txt => %w[text/plain],
+    :xhtml => %w[application/xhtml+xml],
+    :xml => %w[text/xml],
+  }.each do |extension, mime_types|
+    mime_types.each do |mime_type|
+      specify "should cache #{mime_type} responses with the extension ('#{extension}') unchanged" do
+        request(:path=>"/a.#{extension}", :headers=>{'CT'=>mime_type})
+        @cache.should.equal("/a.#{extension}"=>@def_value)
+      end
 
-  specify "should not delete existing extensions" do
-    request(:path=>'/d.css', :headers=>{'CT'=>'text/html'})
-    @cache.should.equal('/d.css.html'=>@def_value)
+      specify "should cache #{mime_type} responses with the relevant extension ('#{extension}') added if not already present" do
+        request(:path=>'/a', :headers=>{'CT'=>mime_type})
+        @cache.should.equal("/a.#{extension}"=>@def_value)
+      end
+    end
+  end
+  
+  specify "should cache 'text/html' responses with the extension ('htm') unchanged" do
+    request(:path=>"/a.htm", :headers=>{'CT'=>"text/html"})
+    @cache.should.equal("/a.htm"=>@def_value)
+  end
+  
+  [:css, :xml, :xhtml, :js, :txt, :pdf, :csv].each do |extension|
+    specify "should not cache if extension and content-type don't agree" do
+      request(:path=>"/d.#{extension}", :headers=>{'CT'=>'text/html'})
+      @cache.should.equal({})
+    end    
   end
 
   specify "should cache html responses with empty basename to index.html by default" do
