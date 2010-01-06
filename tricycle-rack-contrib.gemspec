@@ -2,15 +2,15 @@ Gem::Specification.new do |s|
   s.specification_version = 2 if s.respond_to? :specification_version=
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
 
-  s.name = 'rack-contrib'
-  s.version = '0.9.3'
-  s.date = '2009-08-06'
+  s.name = 'tricycle-rack-contrib'
+  s.version = '0.9.0'
+  s.date = '2010-01-06'
 
-  s.description = "Contributed Rack Middleware and Utilities"
-  s.summary     = "Contributed Rack Middleware and Utilities"
+  s.description = "Contributed Rack Middleware and Utilities, including Tricycle's modifications"
+  s.summary     = "Contributed Rack Middleware and Utilities, including Tricycle's modifications"
 
-  s.authors = ["rack-devel"]
-  s.email = "rack-devel@googlegroups.com"
+  s.authors = ["tricycle", "rack-devel"]
+  s.email = "gems@tricycledevelopments.com"
 
   # = MANIFEST =
   s.files = %w[
@@ -44,7 +44,7 @@ Gem::Specification.new do |s|
     lib/rack/contrib/sendfile.rb
     lib/rack/contrib/signals.rb
     lib/rack/contrib/time_zone.rb
-    rack-contrib.gemspec
+    tricycle-rack-contrib.gemspec
     test/404.html
     test/Maintenance.html
     test/mail_settings.rb
@@ -81,8 +81,8 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'json', '>= 1.1'
 
   s.has_rdoc = true
-  s.homepage = "http://github.com/rack/rack-contrib/"
-  s.rdoc_options = ["--line-numbers", "--inline-source", "--title", "rack-contrib", "--main", "README"]
+  s.homepage = "http://github.com/tricycle/rack-contrib/"
+  s.rdoc_options = ["--line-numbers", "--inline-source", "--title", "tricycle-rack-contrib", "--main", "README"]
   s.require_paths = %w[lib]
   s.rubygems_version = '1.1.1'
 end
