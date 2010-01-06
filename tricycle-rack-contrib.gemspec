@@ -3,7 +3,7 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
 
   s.name = 'tricycle-rack-contrib'
-  s.version = '0.9.0'
+  s.version = '0.9.5'
   s.date = '2010-01-06'
 
   s.description = "Contributed Rack Middleware and Utilities, including Tricycle's modifications"
