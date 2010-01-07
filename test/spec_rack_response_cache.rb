@@ -45,7 +45,7 @@ context Rack::ResponseCache do
     @cache.should.equal({})
   end
 
-  specify "should not cache results if there is a query string" do
+  specify "should not cache results if there is a non-empty query string" do
     request(:path=>'/path/to/blah?id=1')
     @cache.should.equal({})
     request(:path=>'/path/to/?id=1')
@@ -162,6 +162,11 @@ context Rack::ResponseCache do
       request(:path=>"/d.#{extension}", :headers=>{'CT'=>'text/html'})
       @cache.should.equal({})
     end    
+  end
+  
+  specify "should cache unrecognized extensions with text/html content type at .html" do
+    request(:path=>"/a.seo", :headers=>{'CT'=>"text/html"})
+    @cache.should.equal("/a.seo.html"=>@def_value)
   end
 
   specify "should cache html responses with empty basename to index.html by default" do

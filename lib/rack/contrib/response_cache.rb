@@ -25,19 +25,23 @@ class Rack::ResponseCache
       "text/plain" => %w[txt],
       "text/xml" => %w[xml],
     }
+    allowed_extensions = content_types.collect {|k, v| v }.flatten.uniq
     content_type = res[1]['Content-Type'].to_s
+    extension = File.extname(path)[1..-1]
     
-    if !path.include?('..') and extensions = content_types[content_type]
+    if !path.include?('..') and allowed_extensions_for_content_type = content_types[content_type]
       # path doesn't include '..' and Content-Type is whitelisted
       case
       when path.match(/\/$/) && content_type == "text/html"
         # path ends in / and Content-Type is text/html
         path << "index.html"
-      when File.extname(path) == ""
-        # no extension
-        path << ".#{extensions.first}"
-      when !extensions.include?(File.extname(path)[1..-1])
-        # extension agrees with Content-Type
+      when File.extname(path) == "" ||
+        (!allowed_extensions.include?(extension) && content_type == "text/html")
+        # no extension OR
+        # extension is unrecognized AND content_type is text/html
+        path << ".#{allowed_extensions_for_content_type.first}"
+      when !allowed_extensions_for_content_type.include?(extension)
+        # extension doesn't agree with Content-Type (but extension is recognized)
         path = nil
       else
         # do nothing, path is alright
