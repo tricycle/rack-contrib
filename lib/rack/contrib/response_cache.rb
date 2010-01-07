@@ -7,6 +7,18 @@ require 'rack'
 # Rails' page caching, allowing you to cache dynamic pages to static files that can
 # be served directly by a front end webserver.
 class Rack::ResponseCache
+  CONTENT_TYPES = {
+    "application/pdf" => %w[pdf],
+    "application/xhtml+xml" => %w[xhtml],
+    "text/css" => %w[css],
+    "text/csv" => %w[csv],
+    "text/html" => %w[html htm],
+    "text/javascript" => %w[js], "application/javascript" => %w[js],
+    "text/plain" => %w[txt],
+    "text/xml" => %w[xml],
+  }
+  ALLOWED_EXTENSIONS = CONTENT_TYPES.collect {|k, v| v }.flatten.uniq
+
   # The default proc used if a block is not provided to .new
   # Doesn't cache unless path does not contain '..', Content-Type is
   # whitelisted, and path agrees with Content-Type
@@ -15,38 +27,31 @@ class Rack::ResponseCache
   DEFAULT_PATH_PROC = proc do |env, res|
     path = Rack::Utils.unescape(env['PATH_INFO'])
     
-    content_types = {
-      "application/pdf" => %w[pdf],
-      "application/xhtml+xml" => %w[xhtml],
-      "text/css" => %w[css],
-      "text/csv" => %w[csv],
-      "text/html" => %w[html htm],
-      "text/javascript" => %w[js], "application/javascript" => %w[js],
-      "text/plain" => %w[txt],
-      "text/xml" => %w[xml],
-    }
-    allowed_extensions = content_types.collect {|k, v| v }.flatten.uniq
-    content_type = res[1]['Content-Type'].to_s
+    content_type = res[1]['Content-Type'].to_s.split(';').first
     extension = File.extname(path)[1..-1]
     
-    if !path.include?('..') and allowed_extensions_for_content_type = content_types[content_type]
+    if !path.include?('..') and (allowed_extensions_for_content_type = CONTENT_TYPES[content_type])
       # path doesn't include '..' and Content-Type is whitelisted
       case
       when path.match(/\/$/) && content_type == "text/html"
         # path ends in / and Content-Type is text/html
         path << "index.html"
+      when path.match(/\/$/) && content_type != "text/html"
+        # path ends in / and Content-Type is not text/html - don't cache
+        path = nil
       when File.extname(path) == "" ||
-        (!allowed_extensions.include?(extension) && content_type == "text/html")
+        (!ALLOWED_EXTENSIONS.include?(extension) && content_type == "text/html")
         # no extension OR
-        # extension is unrecognized AND content_type is text/html
+        # unrecognized extension AND content_type is text/html
         path << ".#{allowed_extensions_for_content_type.first}"
       when !allowed_extensions_for_content_type.include?(extension)
-        # extension doesn't agree with Content-Type (but extension is recognized)
+        # extension doesn't agree with Content-Type (but extension is recognized) - don't cache
         path = nil
       else
         # do nothing, path is alright
       end
     else
+      # don't cache
       path = nil
     end
     
