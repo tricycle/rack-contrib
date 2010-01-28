@@ -16,8 +16,9 @@ class Rack::ResponseCache
     "text/javascript" => %w[js], "application/javascript" => %w[js],
     "text/plain" => %w[txt],
     "text/xml" => %w[xml],
+    "text/x-component" => %w[htc],
   }
-  ALLOWED_EXTENSIONS = CONTENT_TYPES.collect {|k, v| v }.flatten.uniq
+  ALLOWED_EXTENSIONS = CONTENT_TYPES.values.flatten.uniq
 
   # The default proc used if a block is not provided to .new
   # Doesn't cache unless path does not contain '..', Content-Type is

@@ -129,16 +129,19 @@ context Rack::ResponseCache do
     @cache.should.equal('/a.html' => @def_value)
   end
 
-  {
-    :css => %w[text/css],
-    :csv => %w[text/csv],
-    :html => %w[text/html],
-    :js => %w[text/javascript application/javascript],
-    :pdf => %w[application/pdf],
-    :txt => %w[text/plain],
-    :xhtml => %w[application/xhtml+xml],
-    :xml => %w[text/xml],
-  }.each do |extension, mime_types|
+  extensions_fixture = {}  # reversed CONTENT_TYPES
+  Rack::ResponseCache::CONTENT_TYPES.each do |mime_type, extensions|
+    extensions.each do |extension|
+      next if extension == "htm"  # special behaviour for .htm
+      if extensions_fixture[extension]
+        extensions_fixture[extension] << mime_type
+      else
+        extensions_fixture[extension] = [mime_type]
+      end
+    end
+  end
+
+  extensions_fixture.each do |extension, mime_types|
     mime_types.each do |mime_type|
       specify "should cache #{mime_type} responses with the extension ('#{extension}') unchanged" do
         request(:path => "/a.#{extension}", :headers => {'CT' => mime_type})
@@ -157,7 +160,7 @@ context Rack::ResponseCache do
     @cache.should.equal("/a.htm" => @def_value)
   end
   
-  [:css, :xml, :xhtml, :js, :txt, :pdf, :csv].each do |extension|
+  (extensions_fixture.keys - %w[htm html]).each do |extension|
     specify "should not cache if extension and content-type don't agree" do
       request(:path => "/d.#{extension}", :headers => {'CT' => 'text/html'})
       @cache.should.equal({})
